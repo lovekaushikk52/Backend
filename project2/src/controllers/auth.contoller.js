@@ -30,7 +30,7 @@ async function registerUser(req,res){
      })
 
      const token=jwt.sign({
-        id:user.__id,
+        id:user._id,
         role:user.role,
      },process.env.JWT_SECRET)
 
@@ -86,5 +86,12 @@ async function loginUser(req,res){
     })
 }
 
+async function logoutUser(req,res){
+    res.clearCookie("token")
+    res.status(200).json({
+        message:"user logged out successfully"
+    })
+}
 
-module.exports={registerUser,loginUser}
+
+module.exports={registerUser,loginUser,logoutUser}
