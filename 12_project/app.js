@@ -20,9 +20,10 @@ app.get('/login',(req,res)=>{
 })
 
 //protected route
-app.get('/profile',isLoggedIn,(req,res)=>{
-    console.log(req.user)
-    res.render("login")
+app.get('/profile',isLoggedIn,async(req,res)=>{ //protected route
+    let user=await userModel.findOne({email:req.user.email})
+    console.log(user)
+    res.render("profile",{user})
 })
 
 app.post("/register",async(req,res)=>{
@@ -62,7 +63,7 @@ app.post("/login",async(req,res)=>{
         if (result) {
             let token=jwt.sign({email:email,userId:user._id},"3ab1ca38148bc9fbc075a7478454714da7b35608a88637b1b19558c62470e2bb");
             res.cookie("token",token)
-            res.status(200).send("u can login")
+            res.status(200).redirect("/profile")
         }
 
         else res.redirect("/login")
@@ -77,13 +78,13 @@ app.get("/logout",(req,res)=>{
 
 //middleware
 function isLoggedIn(req,res,next){
-    if(req.cookies.token==="") res.send("u must logged in")
+    if(req.cookies.token==="") res.redirect("/login")
 
     else{
         let data=jwt.verify(req.cookies.token,"3ab1ca38148bc9fbc075a7478454714da7b35608a88637b1b19558c62470e2bb")
         req.user=data;
+        next()
     }
-    next()
 }
 
 app.listen(3000)
