@@ -21,9 +21,22 @@ app.get('/login',(req,res)=>{
 
 //protected route
 app.get('/profile',isLoggedIn,async(req,res)=>{ //protected route
-    let user=await userModel.findOne({email:req.user.email})
+    let user=await userModel.findOne({email:req.user.email}).populate("posts") //we get post id thats why we are using populate so we get real content
     console.log(user)
     res.render("profile",{user})
+})
+
+app.post('/post',isLoggedIn,async(req,res)=>{ //protected route
+    let user=await userModel.findOne({email:req.user.email})
+
+    let {content}=req.body;
+    let post=await postModel.create({
+        user:user._id,
+        content,
+    })
+    user.posts.push(post._id);
+    await user.save() //coz we are manually saving post.id into users
+    res.redirect("/profile")
 })
 
 app.post("/register",async(req,res)=>{
