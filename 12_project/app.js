@@ -2,17 +2,43 @@ const cookieParser = require("cookie-parser")
 const express=require("express")
 const bcrypt=require("bcrypt")
 const jwt = require("jsonwebtoken");
+const multer=require("multer")
 const app=express()
 const userModel=require("./models/user")
-const postModel=require("./models/post")
+const postModel=require("./models/post");
+const post = require("./models/post");
+const crypto=require("crypto")
+const path=require("path")
 
 app.set("view engine","ejs")
 app.use(cookieParser())
 app.use(express.json())
 app.use(express.urlencoded({extended:true}))
 
+const storage=multer.diskStorage({
+    destination:function(req,file,cb){
+        cb(null,'./public/images/uploads')
+    },
+    filename:function(req,file,cb){
+        crypto.randomBytes(12,function(err,bytes){
+            const fn=bytes.toString("hex") +path.extname(file.originalname)
+            cb(null,fn)
+        })
+    }
+})
+
+const upload=multer({storage:storage})
+
 app.get("/",(req,res)=>{
     res.render("index")
+})
+
+app.get("/test",(req,res)=>{
+    res.render("test")
+})
+
+app.post("/upload",upload.single("image"),(req,res)=>{
+    console.log(req.file)
 })
 
 app.get('/login',(req,res)=>{
@@ -24,6 +50,34 @@ app.get('/profile',isLoggedIn,async(req,res)=>{ //protected route
     let user=await userModel.findOne({email:req.user.email}).populate("posts") //we get post id thats why we are using populate so we get real content
     console.log(user)
     res.render("profile",{user})
+})
+
+app.get('/like/:id',isLoggedIn,async(req,res)=>{ //protected route
+
+    let post=await postModel.findOne({_id:req.params.id}).populate("user") //we get post id thats why we are using populate so we get real content
+
+    if(post.likes.indexOf(req.user.userId)===-1){
+        post.likes.push(req.user.userId)
+    }
+    else{
+        post.likes.splice(post.likes.indexOf(req.user.userId),1);
+    }
+    await post.save()
+    res.redirect("/profile")
+})
+
+app.get("/edit/:id",isLoggedIn,async(req,res)=>{
+
+    let post=await postModel.findOne({_id:req.params.id}).populate('user')
+    res.render("edit",{post})
+
+})
+
+app.post("/update/:id",isLoggedIn,async(req,res)=>{
+
+    let post=await postModel.findOneAndUpdate({_id:req.params.id},{content:req.body.content})
+    res.redirect("/profile")
+
 })
 
 app.post('/post',isLoggedIn,async(req,res)=>{ //protected route
